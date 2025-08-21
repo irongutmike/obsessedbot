@@ -1,0 +1,471 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snoot Palace Bot Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    discord: {
+                        primary: '#5865F2',
+                        secondary: '#7289DA',
+                        background: '#2F3136',
+                        surface: '#36393F',
+                        surfaceLight: '#40444B',
+                        text: '#FFFFFF',
+                        textMuted: '#B9BBBE',
+                        success: '#57F287',
+                        warning: '#FEE75C',
+                        error: '#ED4245'
+                    }
+                },
+                fontFamily: {
+                    'inter': ['Inter', 'sans-serif']
+                }
+            }
+        }
+    };
+    </script>
+</head>
+<body class="bg-discord-background text-discord-text font-inter min-h-screen">
+    
+    <!-- @COMPONENT: Sidebar [navigation, bot status, quick stats] -->
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="w-64 bg-discord-surface border-r border-discord-surfaceLight flex flex-col">
+            <!-- Logo/Title -->
+            <div class="p-6 border-b border-discord-surfaceLight">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-discord-primary rounded-lg flex items-center justify-center">
+                        <i class="fas fa-crown text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-discord-text">Snoot Palace</h1>
+                        <p class="text-sm text-discord-textMuted">Bot Dashboard</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 p-4 space-y-2">
+                <a href="#" class="flex items-center space-x-3 px-3 py-2 rounded-lg bg-discord-primary text-white">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-3 py-2 rounded-lg text-discord-textMuted hover:bg-discord-surfaceLight hover:text-discord-text transition-colors">
+                    <i class="fas fa-comments"></i>
+                    <span>Activity Monitor</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-3 py-2 rounded-lg text-discord-textMuted hover:bg-discord-surfaceLight hover:text-discord-text transition-colors">
+                    <i class="fas fa-terminal"></i>
+                    <span>Commands</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-3 py-2 rounded-lg text-discord-textMuted hover:bg-discord-surfaceLight hover:text-discord-text transition-colors">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-3 py-2 rounded-lg text-discord-textMuted hover:bg-discord-surfaceLight hover:text-discord-text transition-colors">
+                    <i class="fas fa-database"></i>
+                    <span>Data Export</span>
+                </a>
+            </nav>
+
+            <!-- Bot Status -->
+            <div class="p-4 border-t border-discord-surfaceLight">
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-discord-textMuted">Official Bot</span>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-2 h-2 bg-discord-success rounded-full"></div>
+                            <span class="text-xs text-discord-success">Online</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-discord-textMuted">Monitor Bot</span>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-2 h-2 bg-discord-success rounded-full"></div>
+                            <span class="text-xs text-discord-success">Monitoring</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: Sidebar -->
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-hidden">
+            <!-- @COMPONENT: Header [title, refresh controls, time indicators] -->
+            <header class="bg-discord-surface border-b border-discord-surfaceLight p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold text-discord-text">Activity Dashboard</h2>
+                        <p class="text-discord-textMuted">Real-time server activity comparison</p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="text-right">
+                            <p class="text-sm text-discord-textMuted">Last Updated</p>
+                            <p class="text-sm font-medium" data-bind="lastUpdate">2 seconds ago</p>
+                        </div>
+                        <button class="px-4 py-2 bg-discord-primary hover:bg-discord-secondary rounded-lg transition-colors" data-event="click:refreshData">
+                            <i class="fas fa-sync-alt mr-2"></i>
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+            </header>
+            <!-- @END_COMPONENT: Header -->
+
+            <!-- Dashboard Content -->
+            <main class="p-6 overflow-y-auto h-full bg-discord-background">
+                
+                <!-- @COMPONENT: ActivityComparison [main comparison cards] -->
+                <!-- Activity Overview Cards -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <!-- Snoot Palace Stats -->
+                    <div class="bg-discord-surface rounded-xl p-6 border border-discord-surfaceLight">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-discord-text">Snoot Palace</h3>
+                            <div class="w-3 h-3 bg-discord-success rounded-full"></div>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-discord-textMuted">Messages/Min</span>
+                                <span class="font-bold text-discord-success" data-bind="sp.messagesPerMin">12.3</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-discord-textMuted">Active Users</span>
+                                <span class="font-bold" data-bind="sp.activeUsers">23</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-discord-textMuted">Total Members</span>
+                                <span class="font-bold" data-bind="sp.totalMembers">150</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Snoot Club Stats -->
+                    <div class="bg-discord-surface rounded-xl p-6 border border-discord-surfaceLight">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-discord-text">Snoot Club</h3>
+                            <div class="w-3 h-3 bg-discord-warning rounded-full"></div>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-discord-textMuted">Messages/Min</span>
+                                <span class="font-bold text-discord-error" data-bind="sc.messagesPerMin">8.7</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-discord-textMuted">Active Users</span>
+                                <span class="font-bold" data-bind="sc.activeUsers">45</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-discord-textMuted">Total Members</span>
+                                <span class="font-bold" data-bind="sc.totalMembers">5,000</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Victory Indicator -->
+                    <div class="bg-gradient-to-br from-discord-success to-discord-primary rounded-xl p-6 text-white">
+                        <div class="text-center">
+                            <i class="fas fa-trophy text-4xl mb-3"></i>
+                            <h3 class="text-xl font-bold mb-2">We're Winning!</h3>
+                            <p class="text-sm opacity-90">41% more active per capita</p>
+                            <div class="mt-4 bg-white bg-opacity-20 rounded-lg p-3">
+                                <div class="text-2xl font-bold" data-bind="activityRatio">1.41x</div>
+                                <div class="text-xs">Activity Multiplier</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: ActivityComparison -->
+
+                <!-- @COMPONENT: ChartsSection [activity charts and trends] -->
+                <!-- Charts Section -->
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+                    <!-- Activity Timeline Chart -->
+                    <div class="bg-discord-surface rounded-xl p-6 border border-discord-surfaceLight">
+                        <h3 class="text-lg font-semibold text-discord-text mb-4">Activity Timeline (Last 24h)</h3>
+                        <div class="h-64">
+                            <canvas id="activityChart" class="w-full h-full"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- User Activity Heatmap -->
+                    <div class="bg-discord-surface rounded-xl p-6 border border-discord-surfaceLight">
+                        <h3 class="text-lg font-semibold text-discord-text mb-4">Hourly Activity Pattern</h3>
+                        <div class="space-y-2">
+                            <!-- @MAP: hourlyData.map(hour => ( -->
+                            <div class="flex items-center space-x-3" data-mock="true">
+                                <span class="text-xs text-discord-textMuted w-8">12AM</span>
+                                <div class="flex-1 bg-discord-background rounded-full h-3 relative overflow-hidden">
+                                    <div class="bg-gradient-to-r from-discord-primary to-discord-success h-full rounded-full" style="width: 65%"></div>
+                                </div>
+                                <span class="text-xs text-discord-textMuted w-8">65%</span>
+                            </div>
+                            <div class="flex items-center space-x-3" data-mock="true">
+                                <span class="text-xs text-discord-textMuted w-8">1AM</span>
+                                <div class="flex-1 bg-discord-background rounded-full h-3 relative overflow-hidden">
+                                    <div class="bg-gradient-to-r from-discord-primary to-discord-success h-full rounded-full" style="width: 45%"></div>
+                                </div>
+                                <span class="text-xs text-discord-textMuted w-8">45%</span>
+                            </div>
+                            <div class="flex items-center space-x-3" data-mock="true">
+                                <span class="text-xs text-discord-textMuted w-8">2AM</span>
+                                <div class="flex-1 bg-discord-background rounded-full h-3 relative overflow-hidden">
+                                    <div class="bg-gradient-to-r from-discord-primary to-discord-success h-full rounded-full" style="width: 30%"></div>
+                                </div>
+                                <span class="text-xs text-discord-textMuted w-8">30%</span>
+                            </div>
+                            <!-- @END_MAP )) -->
+                            <div class="text-center mt-4">
+                                <button class="text-discord-primary hover:text-discord-secondary text-sm" data-event="click:showFullHeatmap">
+                                    View Full 24h Pattern <i class="fas fa-chevron-right ml-1"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: ChartsSection -->
+
+                <!-- @COMPONENT: CommandsAndLogs [slash commands interface and recent activity] -->
+                <!-- Commands and Recent Activity -->
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+                    <!-- Slash Commands Interface -->
+                    <div class="bg-discord-surface rounded-xl p-6 border border-discord-surfaceLight">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-discord-text">Available Commands</h3>
+                            <span class="text-xs bg-discord-primary px-2 py-1 rounded-full text-white">Live</span>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="bg-discord-background rounded-lg p-4 border-l-4 border-discord-success">
+                                <div class="flex items-center justify-between mb-2">
+                                    <code class="text-discord-success font-mono">/activity</code>
+                                    <span class="text-xs text-discord-textMuted">Used 47 times</span>
+                                </div>
+                                <p class="text-sm text-discord-textMuted">Show current activity comparison</p>
+                                <button class="mt-2 text-xs text-discord-primary hover:text-discord-secondary" data-event="click:testCommand" data-implementation="Should execute /activity command in test mode">
+                                    Test Command <i class="fas fa-play ml-1"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="bg-discord-background rounded-lg p-4 border-l-4 border-discord-secondary">
+                                <div class="flex items-center justify-between mb-2">
+                                    <code class="text-discord-secondary font-mono">/history [timeframe]</code>
+                                    <span class="text-xs text-discord-textMuted">Used 23 times</span>
+                                </div>
+                                <p class="text-sm text-discord-textMuted">Show historical activity data</p>
+                                <button class="mt-2 text-xs text-discord-primary hover:text-discord-secondary" data-event="click:testCommand" data-implementation="Should execute /history command in test mode">
+                                    Test Command <i class="fas fa-play ml-1"></i>
+                                </button>
+                            </div>
+
+                            <div class="bg-discord-background rounded-lg p-4 border-l-4 border-discord-warning">
+                                <div class="flex items-center justify-between mb-2">
+                                    <code class="text-discord-warning font-mono">/compare [metric]</code>
+                                    <span class="text-xs text-discord-textMuted">Used 12 times</span>
+                                </div>
+                                <p class="text-sm text-discord-textMuted">Compare specific metrics between servers</p>
+                                <button class="mt-2 text-xs text-discord-primary hover:text-discord-secondary" data-event="click:testCommand" data-implementation="Should execute /compare command in test mode">
+                                    Test Command <i class="fas fa-play ml-1"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity Log -->
+                    <div class="bg-discord-surface rounded-xl p-6 border border-discord-surfaceLight">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-discord-text">Recent Activity</h3>
+                            <button class="text-xs text-discord-primary hover:text-discord-secondary" data-event="click:clearLogs">
+                                Clear Log <i class="fas fa-trash ml-1"></i>
+                            </button>
+                        </div>
+                        <div class="space-y-3 max-h-80 overflow-y-auto">
+                            <!-- @MAP: recentActivity.map(activity => ( -->
+                            <div class="flex items-start space-x-3 p-3 bg-discord-background rounded-lg" data-mock="true">
+                                <div class="w-2 h-2 bg-discord-success rounded-full mt-2 flex-shrink-0"></div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm font-medium text-discord-text">Activity spike detected</span>
+                                        <span class="text-xs text-discord-textMuted">2m ago</span>
+                                    </div>
+                                    <p class="text-xs text-discord-textMuted">SP: 15 msg/min, SC: 8 msg/min</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start space-x-3 p-3 bg-discord-background rounded-lg" data-mock="true">
+                                <div class="w-2 h-2 bg-discord-primary rounded-full mt-2 flex-shrink-0"></div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm font-medium text-discord-text">Command executed</span>
+                                        <span class="text-xs text-discord-textMuted">5m ago</span>
+                                    </div>
+                                    <p class="text-xs text-discord-textMuted">User ran /activity command</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start space-x-3 p-3 bg-discord-background rounded-lg" data-mock="true">
+                                <div class="w-2 h-2 bg-discord-warning rounded-full mt-2 flex-shrink-0"></div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm font-medium text-discord-text">Monitor reconnected</span>
+                                        <span class="text-xs text-discord-textMuted">12m ago</span>
+                                    </div>
+                                    <p class="text-xs text-discord-textMuted">Selfbot resumed monitoring SC</p>
+                                </div>
+                            </div>
+                            <!-- @END_MAP )) -->
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: CommandsAndLogs -->
+
+                <!-- @COMPONENT: ConfigurationPanel [settings and data management] -->
+                <!-- Configuration Panel -->
+                <div class="bg-discord-surface rounded-xl p-6 border border-discord-surfaceLight">
+                    <h3 class="text-lg font-semibold text-discord-text mb-6">System Configuration</h3>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Monitoring Settings -->
+                        <div class="space-y-4">
+                            <h4 class="font-medium text-discord-text">Monitoring Settings</h4>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <label class="text-sm text-discord-textMuted">Update Interval</label>
+                                    <select class="bg-discord-background border border-discord-surfaceLight rounded px-3 py-1 text-sm text-discord-text" data-bind="settings.updateInterval">
+                                        <option>5 seconds</option>
+                                        <option>10 seconds</option>
+                                        <option>30 seconds</option>
+                                    </select>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <label class="text-sm text-discord-textMuted">Data Retention</label>
+                                    <select class="bg-discord-background border border-discord-surfaceLight rounded px-3 py-1 text-sm text-discord-text" data-bind="settings.dataRetention">
+                                        <option>7 days</option>
+                                        <option>30 days</option>
+                                        <option>90 days</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Alert Settings -->
+                        <div class="space-y-4">
+                            <h4 class="font-medium text-discord-text">Alert Settings</h4>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-discord-textMuted">Activity Alerts</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="sr-only peer" checked data-bind="settings.activityAlerts">
+                                        <div class="w-11 h-6 bg-discord-background peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-discord-success"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-discord-textMuted">Error Notifications</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="sr-only peer" checked data-bind="settings.errorNotifications">
+                                        <div class="w-11 h-6 bg-discord-background peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-discord-success"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Data Management -->
+                        <div class="space-y-4">
+                            <h4 class="font-medium text-discord-text">Data Management</h4>
+                            <div class="space-y-3">
+                                <button class="w-full px-4 py-2 bg-discord-primary hover:bg-discord-secondary rounded-lg transition-colors text-sm" data-event="click:exportData" data-implementation="Should export activity data to CSV/JSON">
+                                    <i class="fas fa-download mr-2"></i>
+                                    Export Data
+                                </button>
+                                <button class="w-full px-4 py-2 bg-discord-warning hover:bg-yellow-500 text-black rounded-lg transition-colors text-sm" data-event="click:clearData" data-implementation="Should clear old data with confirmation">
+                                    <i class="fas fa-trash mr-2"></i>
+                                    Clear Old Data
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: ConfigurationPanel -->
+
+            </main>
+        </div>
+    </div>
+
+    <script>
+    // TODO: Implement business logic, API calls, and state management
+    (function() {
+        // Chart initialization
+        const ctx = document.getElementById('activityChart');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'],
+                    datasets: [{
+                        label: 'Snoot Palace',
+                        data: [5, 3, 2, 4, 8, 12, 15, 18, 16, 14, 12, 8],
+                        borderColor: '#57F287',
+                        backgroundColor: 'rgba(87, 242, 135, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Snoot Club',
+                        data: [8, 5, 3, 6, 10, 8, 12, 14, 11, 9, 7, 6],
+                        borderColor: '#ED4245',
+                        backgroundColor: 'rgba(237, 66, 69, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#B9BBBE'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            grid: {
+                                color: '#40444B'
+                            },
+                            ticks: {
+                                color: '#B9BBBE'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: '#40444B'
+                            },
+                            ticks: {
+                                color: '#B9BBBE'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Auto-refresh simulation
+        setInterval(() => {
+            const lastUpdateElement = document.querySelector('[data-bind="lastUpdate"]');
+            if (lastUpdateElement) {
+                lastUpdateElement.textContent = 'Just now';
+                setTimeout(() => {
+                    lastUpdateElement.textContent = '2 seconds ago';
+                }, 2000);
+            }
+        }, 30000);
+    })();
+    </script>
+</body>
+</html>
