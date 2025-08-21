@@ -62,8 +62,8 @@ export function Sidebar({ botStatuses = [] }: SidebarProps) {
       <nav className="flex-1 p-4 space-y-2">
         {navigationItems.map((item) => (
           <Link key={item.path} href={item.path}>
-            <a
-              className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
+            <div
+              className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors cursor-pointer ${
                 item.active
                   ? "bg-discord-primary text-white"
                   : "text-discord-textMuted hover:bg-discord-surfaceLight hover:text-discord-text"
@@ -71,7 +71,7 @@ export function Sidebar({ botStatuses = [] }: SidebarProps) {
             >
               <item.icon className="h-5 w-5" />
               <span>{item.label}</span>
-            </a>
+            </div>
           </Link>
         ))}
       </nav>
