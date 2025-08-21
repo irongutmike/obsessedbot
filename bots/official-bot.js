@@ -21,6 +21,7 @@ class SnootPalaceBot {
     this.messageBuffer = [];
     this.activeUsers = new Set();
     this.apiBaseUrl = process.env.API_BASE_URL || 'http://localhost:5000/api';
+    this.lastNotificationTime = 0; // Cooldown for automatic notifications
     
     if (!this.targetChannelId) {
       throw new Error('SNOOT_PALACE_CHANNEL_ID environment variable is required!');
@@ -35,12 +36,7 @@ class SnootPalaceBot {
     this.commands = [
       new SlashCommandBuilder()
         .setName('activity')
-        .setDescription('Compare current activity between Snoot Palace and Snoot Club')
-        .addStringOption(option =>
-          option.setName('channel')
-            .setDescription('Specific channel to monitor (optional)')
-            .setRequired(false)
-        ),
+        .setDescription('Compare current activity between Snoot Palace and Snoot Club'),
       
       new SlashCommandBuilder()
         .setName('history')
@@ -156,8 +152,6 @@ class SnootPalaceBot {
     await interaction.deferReply();
 
     try {
-      const channelFilter = interaction.options.getString('channel');
-      
       // Get latest activity data for both servers
       const spData = await this.db.getLatestActivity('snoot_palace');
       const scData = await this.db.getLatestActivity('snoot_club');
@@ -206,6 +200,16 @@ class SnootPalaceBot {
       } else {
         // Equal activity
         response = `We're neck and neck with those chuds. Our messages per hour is ${spMessages} and theirs is ${scMessages}, with ${spUsers} vs ${scUsers} distinct users. It's ${multiplier} active on both sides.`;
+      }
+      
+      // Add streak information
+      const streak = await this.db.getCurrentStreak();
+      const streakDuration = this.formatStreakDuration(streak.streak_started);
+      
+      if (streak.current_leader === 'snoot_palace') {
+        response += ` We have been more active than Snoot Club for ${streakDuration}!`;
+      } else if (streak.current_leader === 'snoot_club') {
+        response += ` Those chuds have been more active than us for ${streakDuration}...`;
       }
       
       await interaction.editReply(response);
@@ -313,6 +317,64 @@ class SnootPalaceBot {
     }
   }
 
+  formatStreakDuration(streakStarted) {
+    const now = new Date();
+    const start = new Date(streakStarted);
+    const diffMs = now - start;
+    
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+    
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  async checkAndNotifyLeadershipChange() {
+    try {
+      // Get current activity data
+      const spData = await this.db.getLatestActivity('snoot_palace');
+      const scData = await this.db.getLatestActivity('snoot_club');
+      
+      if (!spData || !scData) return;
+      
+      const spScore = (spData.messages_per_minute || 0) + (spData.active_users || 0);
+      const scScore = (scData.messages_per_minute || 0) + (scData.active_users || 0);
+      
+      let currentLeader;
+      if (spScore > scScore) {
+        currentLeader = 'snoot_palace';
+      } else if (scScore > spScore) {
+        currentLeader = 'snoot_club';
+      } else {
+        currentLeader = 'tie';
+      }
+      
+      // Check if leadership changed
+      const streak = await this.db.getCurrentStreak();
+      if (currentLeader !== streak.current_leader && currentLeader !== 'tie') {
+        await this.db.updateStreak(currentLeader);
+        
+        // Send notification if cooldown has passed and Snoot Club took the lead
+        if (currentLeader === 'snoot_club') {
+          const now = Date.now();
+          const fiveMinutesAgo = now - (5 * 60 * 1000);
+          const lastNotification = streak.last_notification ? new Date(streak.last_notification).getTime() : 0;
+          
+          if (lastNotification < fiveMinutesAgo) {
+            // Find the target channel and send notification
+            const channel = this.client.channels.cache.get(this.targetChannelId);
+            if (channel) {
+              await channel.send('❌ **PALACE HAS FALLEN!** Those fucking chuds in Snoot Club have overtaken us in activity. Time to step it up, xisters!');
+              await this.db.updateLastNotification();
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error checking leadership change:', error);
+    }
+  }
+
   setupPeriodicTasks() {
     // Calculate and store SP activity data every minute
     cron.schedule('* * * * *', async () => {
@@ -347,7 +409,8 @@ class SnootPalaceBot {
 
         console.log(`📊 Snoot Palace Activity - Messages/hour: ${messagesPerHour}, Active users: ${recentActiveUsers.size}`);
 
-        // API removed - storing to local database only
+        // Check for leadership changes and send notifications
+        await this.checkAndNotifyLeadershipChange();
 
       } catch (error) {
         console.error('Error calculating SP activity:', error);

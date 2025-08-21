@@ -72,6 +72,22 @@ class Database {
       VALUES ('snoot_club', 'Snoot Club', 5000)
     `);
 
+    // Streaks table for tracking who's been winning
+    await this.run(`
+      CREATE TABLE IF NOT EXISTS streaks (
+        id INTEGER PRIMARY KEY,
+        current_leader TEXT NOT NULL,
+        streak_started DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_notification DATETIME DEFAULT NULL
+      )
+    `);
+
+    // Initialize streak tracking if not exists
+    await this.run(`
+      INSERT OR IGNORE INTO streaks (id, current_leader, streak_started)
+      VALUES (1, 'unknown', CURRENT_TIMESTAMP)
+    `);
+
     console.log('Database initialized successfully');
   }
 
@@ -128,6 +144,31 @@ class Database {
 
   async getAllBotStatuses() {
     return await this.all(`SELECT * FROM bot_status`);
+  }
+
+  async getCurrentStreak() {
+    return await this.get(`SELECT * FROM streaks WHERE id = 1`);
+  }
+
+  async updateStreak(leader) {
+    const current = await this.getCurrentStreak();
+    if (current.current_leader !== leader) {
+      // Leader changed, start new streak
+      return await this.run(`
+        UPDATE streaks SET 
+        current_leader = ?, 
+        streak_started = CURRENT_TIMESTAMP,
+        last_notification = NULL
+        WHERE id = 1
+      `, [leader]);
+    }
+    return null; // No change
+  }
+
+  async updateLastNotification() {
+    return await this.run(`
+      UPDATE streaks SET last_notification = CURRENT_TIMESTAMP WHERE id = 1
+    `);
   }
 
   close() {
