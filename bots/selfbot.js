@@ -128,11 +128,17 @@ class SnootClubMonitor {
   }
 
   async start() {
-    const token = process.env.SELFBOT_TOKEN;
+    let token = process.env.SELFBOT_TOKEN;
     if (!token) {
       console.error('❌ SELFBOT_TOKEN environment variable is required');
       process.exit(1);
     }
+
+    // Remove any quotes that might be around the token
+    token = token.replace(/^["']|["']$/g, '');
+    
+    console.log(`🔐 Cleaned token length: ${token.length}`);
+    console.log(`🔐 Token starts with: ${token.substring(0, 10)}...`);
 
     try {
       await this.client.login(token);
