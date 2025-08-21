@@ -1,0 +1,21 @@
+{
+  "name": "discord-monitoring-bots",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Discord monitoring system with selfbot and official bot",
+  "scripts": {
+    "selfbot": "node selfbot.js",
+    "official": "node official-bot.js",
+    "dev": "concurrently \"npm run selfbot\" \"npm run official\""
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "sqlite3": "^5.1.6",
+    "node-cron": "^3.0.3",
+    "dotenv": "^16.3.1",
+    "axios": "^1.6.2"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
