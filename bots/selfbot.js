@@ -37,7 +37,8 @@ class SnootClubMonitor {
       this.messageBuffer.push({
         timestamp: Date.now(),
         userId: message.author.id,
-        channelId: message.channel.id
+        channelId: message.channel.id,
+        channelName: message.channel.name
       });
 
       // Track active users

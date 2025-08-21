@@ -2,7 +2,7 @@
 
 ## Overview
 
-A full-stack web application that monitors Discord server activity across multiple servers using both official bots and selfbots. The system provides real-time activity comparisons, historical data visualization, and administrative controls through a modern dashboard interface. Built with React frontend, Express.js backend, and PostgreSQL database, it tracks messages per minute, active users, and provides comprehensive logging and monitoring capabilities.
+A Discord bot system that monitors chat activity between two Discord servers using both official bots and selfbots. The system provides real-time activity comparisons through Discord slash commands, focusing on raw message counts and distinct user activity rather than per-capita metrics. Built with Node.js, Discord.js, and SQLite database for local storage.
 
 ## User Preferences
 

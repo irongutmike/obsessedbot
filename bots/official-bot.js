@@ -30,38 +30,36 @@ class SnootPalaceBot {
     this.commands = [
       new SlashCommandBuilder()
         .setName('activity')
-        .setDescription('Show current activity comparison between servers'),
+        .setDescription('Compare current activity between Snoot Palace and Snoot Club')
+        .addStringOption(option =>
+          option.setName('channel')
+            .setDescription('Specific channel to monitor (optional)')
+            .setRequired(false)
+        ),
       
       new SlashCommandBuilder()
         .setName('history')
-        .setDescription('Show historical activity data')
+        .setDescription('View historical activity data')
         .addStringOption(option =>
           option.setName('timeframe')
-            .setDescription('Time period to show')
+            .setDescription('Time period to analyze')
             .setRequired(false)
             .addChoices(
               { name: '1 hour', value: '1h' },
               { name: '6 hours', value: '6h' },
               { name: '24 hours', value: '24h' },
               { name: '7 days', value: '7d' }
-            )),
-      
-      new SlashCommandBuilder()
-        .setName('compare')
-        .setDescription('Compare specific metrics between servers')
+            )
+        )
         .addStringOption(option =>
-          option.setName('metric')
-            .setDescription('Metric to compare')
-            .setRequired(true)
-            .addChoices(
-              { name: 'Messages per minute', value: 'messages' },
-              { name: 'Active users', value: 'users' },
-              { name: 'Per capita activity', value: 'percapita' }
-            )),
+          option.setName('channel')
+            .setDescription('Specific channel to analyze (optional)')
+            .setRequired(false)
+        ),
       
       new SlashCommandBuilder()
         .setName('status')
-        .setDescription('Show bot and monitoring system status')
+        .setDescription('Check bot and monitoring system status')
     ];
   }
 
@@ -83,7 +81,8 @@ class SnootPalaceBot {
       this.messageBuffer.push({
         timestamp: Date.now(),
         userId: message.author.id,
-        channelId: message.channel.id
+        channelId: message.channel.id,
+        channelName: message.channel.name
       });
 
       // Track active users
@@ -104,9 +103,6 @@ class SnootPalaceBot {
             break;
           case 'history':
             await this.handleHistoryCommand(interaction);
-            break;
-          case 'compare':
-            await this.handleCompareCommand(interaction);
             break;
           case 'status':
             await this.handleStatusCommand(interaction);
@@ -154,6 +150,8 @@ class SnootPalaceBot {
     await interaction.deferReply();
 
     try {
+      const channelFilter = interaction.options.getString('channel');
+      
       // Get latest activity data for both servers
       const spData = await this.db.getLatestActivity('snoot_palace');
       const scData = await this.db.getLatestActivity('snoot_club');
@@ -163,36 +161,27 @@ class SnootPalaceBot {
         return;
       }
 
-      const spPerCapita = (spData.messages_per_minute || 0) / 150; // SP has ~150 members
-      const scPerCapita = (scData.messages_per_minute || 0) / 5000; // SC has ~5000 members
-      const ratio = spPerCapita / (scPerCapita || 1);
-      const isWinning = ratio > 1;
-
-      const embed = new EmbedBuilder()
-        .setTitle('🏆 Server Activity Comparison')
-        .setColor(isWinning ? 0x57F287 : 0xED4245)
-        .setTimestamp()
-        .addFields(
-          {
-            name: '👑 Snoot Palace',
-            value: `**${spData.messages_per_minute?.toFixed(1) || '0.0'}** msg/min\n**${spData.active_users || 0}** active users\n**150** total members`,
-            inline: true
-          },
-          {
-            name: '🏛️ Snoot Club',
-            value: `**${scData.messages_per_minute?.toFixed(1) || '0.0'}** msg/min\n**${scData.active_users || 0}** active users\n**5,000** total members`,
-            inline: true
-          },
-          {
-            name: isWinning ? '🎉 We\'re Winning!' : '📊 Current Status',
-            value: `**${ratio.toFixed(2)}x** activity multiplier\n${isWinning ? `**${Math.round((ratio - 1) * 100)}%** more active per capita` : `**${Math.round((1 - ratio) * 100)}%** less active per capita`}`,
-            inline: false
-          }
-        )
-        .setFooter({ text: 'Data updates every minute' });
-
-      await interaction.editReply({ embeds: [embed] });
+      const spMessages = spData.messages_per_minute || 0;
+      const scMessages = scData.messages_per_minute || 0;
+      const spUsers = spData.active_users || 0;
+      const scUsers = scData.active_users || 0;
       
+      // Simple activity score: messages + distinct users
+      const spScore = spMessages + spUsers;
+      const scScore = scMessages + scUsers;
+      
+      let response;
+      if (scScore > spScore) {
+        const msgDiff = scMessages - spMessages;
+        const userDiff = scUsers - spUsers;
+        response = `the fucking chuds in snoot house are *more active* by ${msgDiff} messages per minute and ${userDiff} distinct users.... palace has fallen...`;
+      } else {
+        const msgDiff = spMessages - scMessages;
+        const userDiff = spUsers - scUsers;
+        response = `We are SO fucking back. The west has risen, we are more active by ${msgDiff} messages per minute and ${userDiff} distinct users. Keep it up xisters.`;
+      }
+      
+      await interaction.editReply(response);
       await this.db.insertSystemLog('command_executed', `/activity command used by ${interaction.user.username}`);
     } catch (error) {
       console.error('Error in activity command:', error);
@@ -204,6 +193,7 @@ class SnootPalaceBot {
     await interaction.deferReply();
 
     const timeframe = interaction.options.getString('timeframe') || '24h';
+    const channelFilter = interaction.options.getString('channel');
     
     try {
       const now = new Date();
@@ -234,31 +224,20 @@ class SnootPalaceBot {
         return;
       }
 
-      const spAvg = spHistory.reduce((sum, data) => sum + (data.messages_per_minute || 0), 0) / spHistory.length;
-      const scAvg = scHistory.reduce((sum, data) => sum + (data.messages_per_minute || 0), 0) / scHistory.length;
+      const spAvg = spHistory.reduce((sum, data) => sum + (data.messages_per_minute || 0), 0) / (spHistory.length || 1);
+      const scAvg = scHistory.reduce((sum, data) => sum + (data.messages_per_minute || 0), 0) / (scHistory.length || 1);
       const spPeak = Math.max(...spHistory.map(data => data.messages_per_minute || 0));
       const scPeak = Math.max(...scHistory.map(data => data.messages_per_minute || 0));
-
-      const embed = new EmbedBuilder()
-        .setTitle(`📈 Activity History (${timeframe})`)
-        .setColor(0x5865F2)
-        .setTimestamp()
-        .addFields(
-          {
-            name: '👑 Snoot Palace Stats',
-            value: `**${spAvg.toFixed(1)}** avg msg/min\n**${spPeak.toFixed(1)}** peak msg/min\n**${spHistory.length}** data points`,
-            inline: true
-          },
-          {
-            name: '🏛️ Snoot Club Stats',
-            value: `**${scAvg.toFixed(1)}** avg msg/min\n**${scPeak.toFixed(1)}** peak msg/min\n**${scHistory.length}** data points`,
-            inline: true
-          }
-        )
-        .setFooter({ text: `Timeframe: ${timeframe}` });
-
-      await interaction.editReply({ embeds: [embed] });
       
+      let response = `Today, we had a peak message per minute of ${spPeak.toFixed(1)} and an average of ${spAvg.toFixed(1)}, while those RETARDS over in the 'club had a peak message per minute of ${scPeak.toFixed(1)} and an average of ${scAvg.toFixed(1)}.`;
+      
+      if (spPeak > scPeak || spAvg > scAvg) {
+        response += ' Keep it up palacecacas.';
+      } else {
+        response += ' they had higher stats today. palace fallen. its so over. I am NOT obsessed btw.';
+      }
+      
+      await interaction.editReply(response);
       await this.db.insertSystemLog('command_executed', `/history command used by ${interaction.user.username} (${timeframe})`);
     } catch (error) {
       console.error('Error in history command:', error);
@@ -266,55 +245,6 @@ class SnootPalaceBot {
     }
   }
 
-  async handleCompareCommand(interaction) {
-    await interaction.deferReply();
-
-    const metric = interaction.options.getString('metric');
-    
-    try {
-      const spData = await this.db.getLatestActivity('snoot_palace');
-      const scData = await this.db.getLatestActivity('snoot_club');
-
-      if (!spData || !scData) {
-        await interaction.editReply('❌ No activity data available for comparison.');
-        return;
-      }
-
-      let comparison = '';
-      let title = '';
-
-      switch (metric) {
-        case 'messages':
-          title = '💬 Messages per Minute Comparison';
-          comparison = `**SP:** ${spData.messages_per_minute?.toFixed(1) || '0.0'} msg/min\n**SC:** ${scData.messages_per_minute?.toFixed(1) || '0.0'} msg/min\n**Difference:** ${((spData.messages_per_minute || 0) - (scData.messages_per_minute || 0)).toFixed(1)} msg/min`;
-          break;
-        case 'users':
-          title = '👥 Active Users Comparison';
-          comparison = `**SP:** ${spData.active_users || 0} users\n**SC:** ${scData.active_users || 0} users\n**Difference:** ${(spData.active_users || 0) - (scData.active_users || 0)} users`;
-          break;
-        case 'percapita':
-          const spPerCapita = (spData.messages_per_minute || 0) / 150;
-          const scPerCapita = (scData.messages_per_minute || 0) / 5000;
-          title = '📊 Per Capita Activity Comparison';
-          comparison = `**SP:** ${spPerCapita.toFixed(4)} msg/min/member\n**SC:** ${scPerCapita.toFixed(4)} msg/min/member\n**Ratio:** ${(spPerCapita / (scPerCapita || 1)).toFixed(2)}x`;
-          break;
-      }
-
-      const embed = new EmbedBuilder()
-        .setTitle(title)
-        .setDescription(comparison)
-        .setColor(0x5865F2)
-        .setTimestamp()
-        .setFooter({ text: 'Live comparison data' });
-
-      await interaction.editReply({ embeds: [embed] });
-      
-      await this.db.insertSystemLog('command_executed', `/compare command used by ${interaction.user.username} (${metric})`);
-    } catch (error) {
-      console.error('Error in compare command:', error);
-      await interaction.editReply('❌ Error performing comparison.');
-    }
-  }
 
   async handleStatusCommand(interaction) {
     await interaction.deferReply();
