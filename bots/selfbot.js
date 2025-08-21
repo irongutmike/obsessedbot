@@ -3,7 +3,7 @@ import Database from './database.js';
 import cron from 'node-cron';
 import dotenv from 'dotenv';
 
-dotenv.config();
+dotenv.config({ path: '../attached_assets/.env' });
 
 class SnootClubMonitor {
   constructor() {

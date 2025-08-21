@@ -4,7 +4,7 @@ import cron from 'node-cron';
 import dotenv from 'dotenv';
 import axios from 'axios';
 
-dotenv.config();
+dotenv.config({ path: '../attached_assets/.env' });
 
 class SnootPalaceBot {
   constructor() {
