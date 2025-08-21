@@ -172,19 +172,31 @@ class SnootPalaceBot {
       const spUsers = spData.active_users || 0;
       const scUsers = scData.active_users || 0;
       
+      // Calculate differences (always positive)
+      const msgDiff = Math.abs(spMessages - scMessages);
+      const userDiff = Math.abs(spUsers - scUsers);
+      
       // Simple activity score: messages + distinct users
       const spScore = spMessages + spUsers;
       const scScore = scMessages + scUsers;
       
       let response;
-      if (scScore > spScore) {
-        const msgDiff = scMessages - spMessages;
-        const userDiff = scUsers - spUsers;
+      
+      // Handle edge cases first
+      if (spMessages > scMessages && spUsers < scUsers) {
+        // We have more messages but fewer users
+        const multiplier = scScore > 0 ? (spScore / scScore).toFixed(1) : 'infinite';
+        response = `Well.. we're doing fine I guess. Our average messages per hour is higher than theirs by ${msgDiff}, but we have ${userDiff} less distinct users talking, putting us at ${multiplier}x more active.`;
+      } else if (spMessages < scMessages && spUsers > scUsers) {
+        // We have fewer messages but more users
+        const multiplier = scScore > 0 ? (spScore / scScore).toFixed(1) : 'infinite';
+        response = `Well.. we're doing fine I guess. Our average messages per hour is lower than theirs by ${msgDiff}, but we have ${userDiff} more distinct users talking, putting us at ${multiplier}x more active.`;
+      } else if (scScore > spScore) {
+        // They're clearly more active
         const multiplier = spScore > 0 ? (scScore / spScore).toFixed(1) : 'infinite';
         response = `the fucking chuds in snoot house are *more active* by ${msgDiff} messages per hour and ${userDiff} distinct users.... meaning they are ${multiplier}x more active. palace has fallen...`;
       } else {
-        const msgDiff = spMessages - scMessages;
-        const userDiff = spUsers - scUsers;
+        // We're clearly more active  
         const multiplier = scScore > 0 ? (spScore / scScore).toFixed(1) : 'infinite';
         response = `We are SO fucking back. The west has risen, we are more active by ${msgDiff} messages per hour and ${userDiff} distinct users, meaning we are ${multiplier}x more active. Keep it up xisters.`;
       }

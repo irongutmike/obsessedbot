@@ -13,6 +13,7 @@ class SnootClubMonitor {
     
     this.db = new Database();
     this.serverId = process.env.SNOOT_CLUB_SERVER_ID || 'snoot_club';
+    this.channelId = process.env.SNOOT_CLUB_CHANNEL_ID; // Specific channel to monitor
     this.messageBuffer = [];
     this.activeUsers = new Set();
     this.isMonitoring = false;
@@ -32,6 +33,9 @@ class SnootClubMonitor {
     this.client.on('messageCreate', (message) => {
       if (message.author.bot) return;
       if (message.guild?.id !== this.serverId) return;
+      
+      // Only monitor specific channel if specified
+      if (this.channelId && message.channel.id !== this.channelId) return;
       
       // Track message for activity calculation
       this.messageBuffer.push({
