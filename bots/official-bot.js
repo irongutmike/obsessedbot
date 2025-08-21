@@ -117,7 +117,13 @@ class SnootPalaceBot {
       } catch (error) {
         console.error(`Error handling ${commandName} command:`, error);
         await this.db.insertCommandLog(commandName, user.id, false, error.message);
-        await interaction.reply({ content: 'An error occurred while executing the command.', ephemeral: true });
+        
+        // Check if we can still respond
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: 'An error occurred while executing the command.', ephemeral: true });
+        } else if (interaction.deferred) {
+          await interaction.editReply('An error occurred while executing the command.');
+        }
       }
     });
 
@@ -383,17 +389,7 @@ class SnootPalaceBot {
 
         console.log(`📊 Snoot Palace Activity - Messages/min: ${messagesPerMinute}, Active users: ${recentActiveUsers.size}`);
 
-        // Send data to dashboard API
-        try {
-          await axios.post(`${this.apiBaseUrl}/activity`, {
-            serverId: 'snoot_palace',
-            messagesPerMinute,
-            activeUsers: recentActiveUsers.size,
-            messageCount: recentMessages.length
-          });
-        } catch (apiError) {
-          console.error('Error sending data to API:', apiError.message);
-        }
+        // API removed - storing to local database only
 
       } catch (error) {
         console.error('Error calculating SP activity:', error);
