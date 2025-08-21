@@ -172,33 +172,40 @@ class SnootPalaceBot {
       const spUsers = spData.active_users || 0;
       const scUsers = scData.active_users || 0;
       
-      // Calculate differences (always positive)
-      const msgDiff = Math.abs(spMessages - scMessages);
-      const userDiff = Math.abs(spUsers - scUsers);
-      
       // Simple activity score: messages + distinct users
       const spScore = spMessages + spUsers;
       const scScore = scMessages + scUsers;
       
       let response;
+      let multiplier;
+      
+      // Handle multiplier calculation with proper zero handling
+      if (scScore === 0 && spScore > 0) {
+        multiplier = 'completely';
+      } else if (spScore === 0 && scScore > 0) {
+        multiplier = 'completely';
+      } else if (spScore > 0 && scScore > 0) {
+        multiplier = spScore > scScore ? (spScore / scScore).toFixed(1) + 'x' : (scScore / spScore).toFixed(1) + 'x';
+      } else {
+        multiplier = 'equally';
+      }
       
       // Handle edge cases first
       if (spMessages > scMessages && spUsers < scUsers) {
         // We have more messages but fewer users
-        const multiplier = scScore > 0 ? (spScore / scScore).toFixed(1) : 'infinite';
-        response = `Well.. we're doing fine I guess. Our average messages per hour is higher than theirs by ${msgDiff}, but we have ${userDiff} less distinct users talking, putting us at ${multiplier}x more active.`;
+        response = `Well.. we're doing fine I guess. Our messages per hour is ${spMessages} while theirs is only ${scMessages}, but we have ${spUsers} distinct users talking while they have ${scUsers}, putting us at ${multiplier} more active.`;
       } else if (spMessages < scMessages && spUsers > scUsers) {
         // We have fewer messages but more users
-        const multiplier = scScore > 0 ? (spScore / scScore).toFixed(1) : 'infinite';
-        response = `Well.. we're doing fine I guess. Our average messages per hour is lower than theirs by ${msgDiff}, but we have ${userDiff} more distinct users talking, putting us at ${multiplier}x more active.`;
+        response = `Well.. we're doing fine I guess. Our messages per hour is ${spMessages} while theirs is ${scMessages}, but we have ${spUsers} distinct users talking while they only have ${scUsers}, putting us at ${multiplier} more active.`;
       } else if (scScore > spScore) {
         // They're clearly more active
-        const multiplier = spScore > 0 ? (scScore / spScore).toFixed(1) : 'infinite';
-        response = `the fucking chuds in snoot house are *more active* by ${msgDiff} messages per hour and ${userDiff} distinct users.... meaning they are ${multiplier}x more active. palace has fallen...`;
-      } else {
+        response = `the fucking chuds in snoot house are *more active*. Their messages per hour is ${scMessages} while ours is only ${spMessages}, and they have ${scUsers} distinct users while we only have ${spUsers}.... meaning they are ${multiplier} more active. palace has fallen...`;
+      } else if (spScore > scScore) {
         // We're clearly more active  
-        const multiplier = scScore > 0 ? (spScore / scScore).toFixed(1) : 'infinite';
-        response = `We are SO fucking back. The west has risen, we are more active by ${msgDiff} messages per hour and ${userDiff} distinct users, meaning we are ${multiplier}x more active. Keep it up xisters.`;
+        response = `We are SO fucking back. The west has risen. Our messages per hour is ${spMessages} while theirs is only ${scMessages}, and we have ${spUsers} distinct users while they only have ${scUsers}, meaning we are ${multiplier} more active. Keep it up xisters.`;
+      } else {
+        // Equal activity
+        response = `We're neck and neck with those chuds. Our messages per hour is ${spMessages} and theirs is ${scMessages}, with ${spUsers} vs ${scUsers} distinct users. It's ${multiplier} active on both sides.`;
       }
       
       await interaction.editReply(response);
