@@ -1,4 +1,4 @@
-import { Client } from 'discord.js';
+import { Client } from 'discord.js-selfbot-v13';
 import Database from './database.js';
 import cron from 'node-cron';
 import dotenv from 'dotenv';
@@ -8,12 +8,7 @@ dotenv.config();
 class SnootClubMonitor {
   constructor() {
     this.client = new Client({
-      intents: [
-        'Guilds',
-        'GuildMessages',
-        'MessageContent',
-        'GuildMembers'
-      ]
+      checkUpdate: false
     });
     
     this.db = new Database();
