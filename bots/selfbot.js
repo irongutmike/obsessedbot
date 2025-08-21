@@ -67,38 +67,39 @@ class SnootClubMonitor {
         const now = Date.now();
         const oneMinuteAgo = now - 60000;
         
-        // Filter messages from the last minute
-        const recentMessages = this.messageBuffer.filter(msg => msg.timestamp > oneMinuteAgo);
-        const messagesPerMinute = recentMessages.length;
+        // Filter messages from the last hour and calculate per-hour rate
+        const oneHourAgo = now - 3600000; // 1 hour ago  
+        const recentMessages = this.messageBuffer.filter(msg => msg.timestamp > oneHourAgo);
+        const messagesPerHour = recentMessages.length;
         
-        // Count unique active users in the last minute
+        // Count unique active users in the last hour
         const recentActiveUsers = new Set(recentMessages.map(msg => msg.userId));
         
         // Store activity data
         await this.db.insertActivityData(
           'snoot_club',
-          messagesPerMinute,
+          messagesPerHour,
           recentActiveUsers.size,
           recentMessages.length
         );
 
-        // Clean old messages from buffer (keep last 5 minutes)
-        const fiveMinutesAgo = now - 300000;
-        this.messageBuffer = this.messageBuffer.filter(msg => msg.timestamp > fiveMinutesAgo);
+        // Clean old messages from buffer (keep 2 hours of data)
+        const twoHoursAgo = now - 7200000;
+        this.messageBuffer = this.messageBuffer.filter(msg => msg.timestamp > twoHoursAgo);
         
         // Reset active users every hour
         if (new Date().getMinutes() === 0) {
           this.activeUsers.clear();
         }
 
-        console.log(`📊 Snoot Club Activity - Messages/min: ${messagesPerMinute}, Active users: ${recentActiveUsers.size}`);
+        console.log(`📊 Snoot Club Activity - Messages/hour: ${messagesPerHour}, Active users: ${recentActiveUsers.size}`);
 
         // Detect activity spikes
-        if (messagesPerMinute > 15) {
+        if (messagesPerHour > 200) {
           await this.db.insertSystemLog(
             'activity_spike', 
             'High activity detected in Snoot Club',
-            `${messagesPerMinute} messages per minute`
+            `${messagesPerHour} messages per hour`
           );
         }
 

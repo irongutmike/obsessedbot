@@ -17,9 +17,14 @@ class SnootPalaceBot {
     
     this.db = new Database();
     this.serverId = process.env.SNOOT_PALACE_SERVER_ID || 'snoot_palace';
+    this.targetChannelId = process.env.SNOOT_PALACE_CHANNEL_ID; // MANDATORY
     this.messageBuffer = [];
     this.activeUsers = new Set();
     this.apiBaseUrl = process.env.API_BASE_URL || 'http://localhost:5000/api';
+    
+    if (!this.targetChannelId) {
+      throw new Error('SNOOT_PALACE_CHANNEL_ID environment variable is required!');
+    }
     
     this.setupCommands();
     this.setupEventHandlers();
@@ -76,6 +81,7 @@ class SnootPalaceBot {
     this.client.on('messageCreate', (message) => {
       if (message.author.bot) return;
       if (message.guild?.id !== this.serverId) return;
+      if (message.channel.id !== this.targetChannelId) return; // ONLY monitor specific channel
       
       // Track message for SP activity calculation
       this.messageBuffer.push({
@@ -174,11 +180,13 @@ class SnootPalaceBot {
       if (scScore > spScore) {
         const msgDiff = scMessages - spMessages;
         const userDiff = scUsers - spUsers;
-        response = `the fucking chuds in snoot house are *more active* by ${msgDiff} messages per minute and ${userDiff} distinct users.... palace has fallen...`;
+        const multiplier = spScore > 0 ? (scScore / spScore).toFixed(1) : 'infinite';
+        response = `the fucking chuds in snoot house are *more active* by ${msgDiff} messages per hour and ${userDiff} distinct users.... meaning they are ${multiplier}x more active. palace has fallen...`;
       } else {
         const msgDiff = spMessages - scMessages;
         const userDiff = spUsers - scUsers;
-        response = `We are SO fucking back. The west has risen, we are more active by ${msgDiff} messages per minute and ${userDiff} distinct users. Keep it up xisters.`;
+        const multiplier = scScore > 0 ? (spScore / scScore).toFixed(1) : 'infinite';
+        response = `We are SO fucking back. The west has risen, we are more active by ${msgDiff} messages per hour and ${userDiff} distinct users, meaning we are ${multiplier}x more active. Keep it up xisters.`;
       }
       
       await interaction.editReply(response);
@@ -229,7 +237,7 @@ class SnootPalaceBot {
       const spPeak = Math.max(...spHistory.map(data => data.messages_per_minute || 0));
       const scPeak = Math.max(...scHistory.map(data => data.messages_per_minute || 0));
       
-      let response = `Today, we had a peak message per minute of ${spPeak.toFixed(1)} and an average of ${spAvg.toFixed(1)}, while those RETARDS over in the 'club had a peak message per minute of ${scPeak.toFixed(1)} and an average of ${scAvg.toFixed(1)}.`;
+      let response = `Today, we had a peak message per hour of ${spPeak.toFixed(1)} and an average of ${spAvg.toFixed(1)}, while those RETARDS over in the 'club had a peak message per hour of ${scPeak.toFixed(1)} and an average of ${scAvg.toFixed(1)}.`;
       
       if (spPeak > scPeak || spAvg > scAvg) {
         response += ' Keep it up palacecacas.';
@@ -293,9 +301,10 @@ class SnootPalaceBot {
         const now = Date.now();
         const oneMinuteAgo = now - 60000;
         
-        // Filter messages from the last minute
-        const recentMessages = this.messageBuffer.filter(msg => msg.timestamp > oneMinuteAgo);
-        const messagesPerMinute = recentMessages.length;
+        // Filter messages from the last hour and calculate per-hour rate
+        const oneHourAgo = now - 3600000; // 1 hour ago
+        const recentMessages = this.messageBuffer.filter(msg => msg.timestamp > oneHourAgo);
+        const messagesPerHour = recentMessages.length;
         
         // Count unique active users in the last minute
         const recentActiveUsers = new Set(recentMessages.map(msg => msg.userId));
@@ -303,21 +312,21 @@ class SnootPalaceBot {
         // Store activity data for Snoot Palace
         await this.db.insertActivityData(
           'snoot_palace',
-          messagesPerMinute,
+          messagesPerHour,
           recentActiveUsers.size,
           recentMessages.length
         );
 
-        // Clean old messages from buffer
-        const fiveMinutesAgo = now - 300000;
-        this.messageBuffer = this.messageBuffer.filter(msg => msg.timestamp > fiveMinutesAgo);
+        // Clean old messages from buffer (keep 2 hours of data)
+        const twoHoursAgo = now - 7200000;
+        this.messageBuffer = this.messageBuffer.filter(msg => msg.timestamp > twoHoursAgo);
         
         // Reset active users every hour
         if (new Date().getMinutes() === 0) {
           this.activeUsers.clear();
         }
 
-        console.log(`📊 Snoot Palace Activity - Messages/min: ${messagesPerMinute}, Active users: ${recentActiveUsers.size}`);
+        console.log(`📊 Snoot Palace Activity - Messages/hour: ${messagesPerHour}, Active users: ${recentActiveUsers.size}`);
 
         // API removed - storing to local database only
 
